@@ -31,7 +31,7 @@ export const authService = {
             },
             { withCredentials: true },
         );
-        return res.data;
+        return res.data; // accessToken, user
     },
 
     signOut: async () => {

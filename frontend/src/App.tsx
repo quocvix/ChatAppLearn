@@ -1,3 +1,4 @@
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ChatAppPage from "./pages/ChatAppPage";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -15,7 +16,9 @@ function App() {
                     <Route path="/signup" element={<SignUpPage />} />
 
                     {/* private routes */}
-                    <Route path="/" element={<ChatAppPage />} />
+                    <Route element={<ProtectedRoute />}>
+                        <Route path="/" element={<ChatAppPage />} />
+                    </Route>
                 </Routes>
             </BrowserRouter>
         </>
