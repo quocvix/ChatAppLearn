@@ -38,7 +38,7 @@ export const signUp = async (req, res) => {
         // return
         return res.sendStatus(204);
     } catch (error) {
-        console.error("Lỗi khi đăng ký", error);
+        console.error("Lỗi gọi signUp", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
     }
 };
@@ -103,7 +103,25 @@ export const signIn = async (req, res) => {
         // trả access token về trong response
         return res.status(200).json({ message: `User ${user.displayName} đăng nhập thành công`, accessToken });
     } catch (error) {
-        console.error("Lỗi khi đăng nhập", error);
+        console.error("Lỗi gọi signIn", error);
+        return res.status(500).json({ message: "Lỗi hệ thống" });
+    }
+};
+
+export const signOut = async (req, res) => {
+    try {
+        // lấy refresh token từ cookie
+        const token = req.cookies?.refreshToken;
+        if (!token) {
+            // xóa refresh token trong session
+            await Session.deleteOne({ refreshToken: token });
+
+            // xóa cookie
+            res.clearCookie("refreshToken");
+        }
+        return res.sendStatus(204);
+    } catch (error) {
+        console.error("Lỗi gọi signOut", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
     }
 };
