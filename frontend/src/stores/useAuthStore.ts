@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { toast } from "sonner";
-import axios from "axios";
 import { authService } from "@/services/authService";
 import type { AuthState } from "@/types/store";
 
@@ -8,6 +7,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     accessToken: null,
     user: null,
     loading: false,
+
+    setAccessToken: (accessToken) => {
+        set({ accessToken });
+    },
 
     clearState: () => {
         set({
@@ -44,15 +47,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ loading: true });
 
             // goi api
-            const { accessToken, user } = await authService.signIn(
+            const { accessToken } = await authService.signIn(
                 username,
                 password,
             );
 
             // luu vao store
-            set({
-                accessToken: accessToken,
-            });
+            get().setAccessToken(accessToken);
+
+            // lay thong tin nguoi dung
+            await get().fetchMe();
 
             toast.success("Đăng nhập thành công!");
         } catch (error) {
@@ -69,7 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             // xoa khoi store
             get().clearState();
-            
+
             // goi api
             await authService.signOut();
 
@@ -77,6 +81,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (error) {
             console.log(error);
             toast.error("Đã có lỗi xảy ra");
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    fetchMe: async () => {
+        try {
+            set({ loading: true });
+
+            // goi api
+            const user = await authService.fetchMe();
+
+            // luu vao store
+            set({ user });
+
+            toast.success("Lấy thông tin người dùng thành công!");
+        } catch (error) {
+            console.log(error);
+            set({ user: null, accessToken: null });
+            toast.error("Lấy thông tin người dùng không thành công");
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    refresh: async () => {
+        try {
+            set({ loading: true });
+            const {user, fetchMe} = get();
+            
+            // goi api
+            const accessToken = await authService.refresh();
+
+            // cap nhat vao store
+            get().setAccessToken(accessToken);
+            
+            if (!user) {
+                await fetchMe();
+            }
+
+        } catch (error) {
+            console.log(error);
+            get().clearState();
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
         } finally {
             set({ loading: false });
         }
