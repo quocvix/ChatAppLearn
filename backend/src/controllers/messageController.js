@@ -40,7 +40,6 @@ export const sendDirectMessage = async (req, res) => {
         await conversation.save();
 
         return res.status(201).json({ message });
-
     } catch (error) {
         console.error("Lỗi khi gửi tin nhắn", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
@@ -49,9 +48,27 @@ export const sendDirectMessage = async (req, res) => {
 
 export const sendGroupMessage = async (req, res) => {
     try {
-        
+        const { conversationId, content } = req.body;
+        const senderId = req.user._id;
+        const conversation = req.conversation;
+
+        if (!content) {
+            return res.status(400).json("Thiếu nội dung");
+        }
+
+        const message = await Message.create({
+            conversationId,
+            senderId,
+            content,
+        });
+
+        updateConversationAfterCreateMessage(conversation, message, senderId);
+
+        await conversation.save();
+
+        return res.status(201).json({ message });
     } catch (error) {
-        console.error("Lỗi khi gửi tin nhắn", error);
+        console.error("Lỗi khi gửi tin nhắn nhóm", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
     }
 };
