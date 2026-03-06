@@ -4,11 +4,19 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "sonner";
+import { useThemeStore } from "./stores/useThemeStore";
+import { useEffect } from "react";
 
 function App() {
+    const { isDark, setTheme } = useThemeStore();
+
+    useEffect(() => {
+        setTheme(isDark);
+    }, [isDark]);
+
     return (
         <>
-            <Toaster richColors position="top-right" />
+            <Toaster richColors position="top-right" expand={true} />
             <BrowserRouter>
                 <Routes>
                     {/* public routes */}

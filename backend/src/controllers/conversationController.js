@@ -1,5 +1,6 @@
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
+// import { io } from "../socket/index.js";
 
 export const createConversation = async (req, res) => {
     try {
@@ -13,9 +14,11 @@ export const createConversation = async (req, res) => {
             !Array.isArray(memberIds) ||
             memberIds.length === 0
         ) {
-            return res.status(400).json({
-                message: "Tên nhóm và danh sách thành viên là bắt buộc",
-            });
+            return res
+                .status(400)
+                .json({
+                    message: "Tên nhóm và danh sách thành viên là bắt buộc",
+                });
         }
 
         let conversation;
@@ -71,24 +74,29 @@ export const createConversation = async (req, res) => {
             { path: "lastMessage.senderId", select: "displayName avatarUrl" },
         ]);
 
-        // const participants = (conversation.participants || []).map((p) => ({
-        //     _id: p.userId?._id,
-        //     displayName: p.userId?.displayName,
-        //     avatarUrl: p.userId?.avatarUrl ?? null,
-        //     joinedAt: p.joinedAt,
-        // }));
+        const participants = (conversation.participants || []).map((p) => ({
+            _id: p.userId?._id,
+            displayName: p.userId?.displayName,
+            avatarUrl: p.userId?.avatarUrl ?? null,
+            joinedAt: p.joinedAt,
+        }));
 
-        // const formatted = { ...conversation.toObject(), participants };
+        const formatted = { ...conversation.toObject(), participants };
 
-        // if (type === "group") {
-        //     memberIds.forEach((userId) => {
-        //         io.to(userId).emit("new-group", formatted);
-        //     });
-        // }
+        if (type === "group") {
+            memberIds.forEach((userId) => {
+                io.to(userId).emit("new-group", formatted);
+            });
+        }
 
-        return res.status(201).json({ conversation });
+        if (type === "direct") {
+            io.to(userId).emit("new-group", formatted);
+            io.to(memberIds[0]).emit("new-group", formatted);
+        }
+
+        return res.status(201).json({ conversation: formatted });
     } catch (error) {
-        console.error("Lỗi khi tạo cuộc trò chuyện", error);
+        console.error("Lỗi khi tạo conversation", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
     }
 };
@@ -96,7 +104,6 @@ export const createConversation = async (req, res) => {
 export const getConversations = async (req, res) => {
     try {
         const userId = req.user._id;
-
         const conversations = await Conversation.find({
             "participants.userId": userId,
         })
@@ -114,8 +121,8 @@ export const getConversations = async (req, res) => {
                 select: "displayName avatarUrl",
             });
 
-        const formatted = conversations.map((conversation) => {
-            const participants = (conversation.participants || []).map((p) => ({
+        const formatted = conversations.map((convo) => {
+            const participants = (convo.participants || []).map((p) => ({
                 _id: p.userId?._id,
                 displayName: p.userId?.displayName,
                 avatarUrl: p.userId?.avatarUrl ?? null,
@@ -123,15 +130,15 @@ export const getConversations = async (req, res) => {
             }));
 
             return {
-                ...conversation.toObject(),
-                unreadCount: conversation.unreadCounts || {},
+                ...convo.toObject(),
+                unreadCounts: convo.unreadCounts || {},
                 participants,
             };
         });
 
         return res.status(200).json({ conversations: formatted });
     } catch (error) {
-        console.error("Lỗi khi lấy danh sách cuộc trò chuyện", error);
+        console.error("Lỗi xảy ra khi lấy conversations", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
     }
 };
@@ -144,11 +151,11 @@ export const getMessages = async (req, res) => {
         const query = { conversationId };
 
         if (cursor) {
-            query.createAt = { $lt: new Date(cursor) };
+            query.createdAt = { $lt: new Date(cursor) };
         }
 
         let messages = await Message.find(query)
-            .sort({ createAt: -1 })
+            .sort({ createdAt: -1 })
             .limit(Number(limit) + 1);
 
         let nextCursor = null;
@@ -161,9 +168,12 @@ export const getMessages = async (req, res) => {
 
         messages = messages.reverse();
 
-        return res.status(200).json({ messages, nextCursor });
+        return res.status(200).json({
+            messages,
+            nextCursor,
+        });
     } catch (error) {
-        console.error("Lỗi khi lấy cuộc trò chuyện", error);
+        console.error("Lỗi xảy ra khi lấy messages", error);
         return res.status(500).json({ message: "Lỗi hệ thống" });
     }
 };
