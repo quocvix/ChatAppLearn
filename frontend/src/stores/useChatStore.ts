@@ -36,7 +36,7 @@ export const useChatStore = create<ChatState>()(
             },
             fetchMessages: async (conversationId) => {
                 const { activeConversationId, messages } = get();
-                const { user } = useAuthStore();
+                const { user } = useAuthStore.getState();
 
                 const convoId = conversationId ?? activeConversationId;
                 if (!convoId) return;
@@ -52,7 +52,8 @@ export const useChatStore = create<ChatState>()(
                 set({ messageLoading: true });
 
                 try {
-                    const { messages: fetched, cursor } = await chatService.fetchMessages(convoId, nextCursor);
+                    const { messages: fetched, cursor } =
+                        await chatService.fetchMessages(convoId, nextCursor);
 
                     const processed = fetched.map((m) => ({
                         ...m,
@@ -61,8 +62,11 @@ export const useChatStore = create<ChatState>()(
 
                     set((state) => {
                         const prev = state.messages[convoId]?.items ?? [];
-                        const merged = prev.length > 0 ? [...processed, ...prev] : processed;
-                        
+                        const merged =
+                            prev.length > 0
+                                ? [...processed, ...prev]
+                                : processed;
+
                         return {
                             messages: {
                                 ...state.messages,
@@ -79,6 +83,46 @@ export const useChatStore = create<ChatState>()(
                     set({ messageLoading: false });
                 } finally {
                     set({ messageLoading: false });
+                }
+            },
+            sendDirectMessage: async (recipientId, content, imgUrl) => {
+                try {
+                    const { activeConversationId } = get();
+                    await chatService.sendDirectMessage(
+                        recipientId,
+                        content,
+                        imgUrl,
+                        activeConversationId || undefined,
+                    );
+
+                    set((state) => ({
+                        conversations: state.conversations.map((c) =>
+                            c._id === activeConversationId
+                                ? { ...c, seenBy: [] }
+                                : c,
+                        ),
+                    }));
+                } catch (error) {
+                    console.error("Lỗi xảy ra khi sendDirectMessage:", error);
+                }
+            },
+            sendGroupMessage: async (conversationId, content, imgUrl) => {
+                try {
+                    await chatService.sendGroupMessage(
+                        conversationId,
+                        content,
+                        imgUrl,
+                    );
+
+                    set((state) => ({
+                        conversations: state.conversations.map((c) =>
+                            c._id === get().activeConversationId
+                                ? { ...c, seenBy: [] }
+                                : c,
+                        ),
+                    }));
+                } catch (error) {
+                    console.error("Lỗi xảy ra khi sendGroupMessage:", error);
                 }
             },
         }),

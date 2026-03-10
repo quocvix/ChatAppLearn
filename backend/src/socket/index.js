@@ -1,0 +1,39 @@
+import { Server } from "socket.io";
+import http from "http";
+import express from "express";
+import { socketAuthMiddleware } from "../middlewares/socketMiddleware.js";
+
+const app = express();
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL,
+        credentials: true,
+    },
+});
+
+io.use(socketAuthMiddleware);
+
+const onlineUsers = new Map(); // {userId: socketId}
+
+io.on("connection", async (socket) => {
+    const user = socket.user;
+
+    console.log(`${user.displayName} online với socket_ID: ${socket.id}`);
+
+    onlineUsers.set(user._id, socket.id);
+
+    io.emit("online-users", Array.from(onlineUsers.keys()));
+
+    socket.on("disconnect", () => {
+        console.log(`socket disconnected: ${socket.id}`);
+        onlineUsers.delete(user._id);
+        io.emit("online-users", Array.from(onlineUsers.keys()));
+    });
+});
+
+io.use(socketAuthMiddleware);
+
+export { io, app, server };
