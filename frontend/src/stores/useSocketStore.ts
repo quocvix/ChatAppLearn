@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { io, type Socket } from "socket.io-client";
 import { useAuthStore } from "./useAuthStore";
 import type { SocketState } from "@/types/store";
+import { useChatStore } from "./useChatStore";
 
 const baseURL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
@@ -27,8 +28,50 @@ export const useSocketStore = create<SocketState>((set, get) => ({
             console.log("Đã kết nối với Socket:", socket.id);
         });
 
+        // online user
         socket.on("online-users", (userIds) => {
             set({ onlineUsers: userIds });
+        });
+
+        // new message
+        socket.on("new-message", ({ message, conversation, unreadCounts }) => {
+            useChatStore.getState().addMessage(message);
+
+            const lastMessage = {
+                _id: conversation.lastMessage._id,
+                content: conversation.lastMessage.content,
+                createdAt: conversation.lastMessage.createdAt,
+                sender: {
+                    _id: conversation.lastMessage.senderId,
+                    displayname: "",
+                    avatarUrl: null,
+                },
+            };
+
+            const updateConversation = {
+                ...conversation,
+                lastMessage,
+                unreadCounts
+            }
+
+            if (useChatStore.getState().activeConversationId === message.conversationId) {
+                useChatStore.getState().markAsSeen();
+            }
+
+            useChatStore.getState().updateConversation(updateConversation)
+        });
+
+        // read message
+        socket.on("read-message", ({ conversation, lastMessage }) => {
+            const updated = {
+                _id: conversation._id,
+                lastMessage,
+                lastMessageAt: conversation.lastMessageAt,
+                unreadCounts: conversation.unreadCounts,
+                seenBy: conversation.seenBy,
+            }
+
+            useChatStore.getState().updateConversation(updated)
         });
     },
     disconnectSocket: () => {

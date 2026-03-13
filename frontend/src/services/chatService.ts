@@ -6,7 +6,7 @@ interface FetchMessageProps {
     cursor?: string;
 }
 
-const pageLimit = 50;
+const pageLimit = 20;
 
 export const chatService = {
     async fetchConversations(): Promise<ConversationResponse> {
@@ -56,5 +56,11 @@ export const chatService = {
         });
 
         return res.data.messages;
+    },
+
+    async markAsSeen(conversationId: string) {
+        const res = await api.patch(`/conversations/${conversationId}/seen`);
+
+        return res.data;
     },
 };

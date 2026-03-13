@@ -2,7 +2,6 @@ import type { Socket } from "socket.io-client";
 import type { Conversation, Message } from "./chat";
 import type { User } from "./user";
 
-
 export interface AuthState {
     accessToken: string | null;
     user: User | null;
@@ -11,7 +10,7 @@ export interface AuthState {
     setAccessToken: (accessToken: string) => void;
 
     clearState: () => void;
-    
+
     signUp: (
         username: string,
         password: string,
@@ -37,11 +36,14 @@ export interface ThemeState {
 
 export interface ChatState {
     conversations: Conversation[];
-    messages: Record<string, {
-        items: Message[];
-        hasMore: boolean;
-        nextCursor?: string | null;
-    }>;
+    messages: Record<
+        string,
+        {
+            items: Message[];
+            hasMore: boolean;
+            nextCursor?: string | null;
+        }
+    >;
     activeConversationId: string | null;
     convoLoading: boolean;
     messageLoading: boolean;
@@ -59,7 +61,12 @@ export interface ChatState {
         conversationId: string,
         content: string,
         imgUrl?: string,
-    ) => Promise<void>;    
+    ) => Promise<void>;
+    // add message
+    addMessage: (message: Message) => Promise<void>;
+    // update convo
+    updateConversation: (conversation: unknown) => void;
+    markAsSeen: () => Promise<void>;
 }
 
 export interface SocketState {
